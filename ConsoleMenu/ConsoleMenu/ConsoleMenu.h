@@ -10,15 +10,15 @@ template<class T>
 T Input(std::string str = "")
 {
 	T res;
-	if (str.size()) std::cout << str << " ";
+	if (str.length()) std::cout << str << " ";
 	std::cin >> res;
 	std::cin.ignore(1);
 	while (std::cin.fail())
 	{
 		std::cin.clear();
 		std::cin.ignore(1024, '\n');
-		std::cout << "ошибка ввода, повторите попытку." << std::endl;
-		if (str.size()) std::cout << str << " ";
+		std::cout << "Input error! Try again." << std::endl;
+		if (str.length()) std::cout << str << " ";
 		std::cin >> res;
 	}
 	return res;
@@ -59,8 +59,8 @@ public:
 // для вывода линий символов в поток
 class Line
 {
-	static const int _lineLength = 80;
 	char _symbol;
+	static unsigned _stdSymbolsInLine;	// количество символов в строке по умолчанию
 public:
 
 	Line(char symbol = '_')
@@ -70,25 +70,36 @@ public:
 
 	friend std::ostream& operator<<(std::ostream &os, Line &l)
 	{
-		for (int i = 0;i < _lineLength;++i)
+		for (unsigned i = 0;i < _stdSymbolsInLine;++i)
 			os << l._symbol;
 		return os << std::endl;
+	}
+
+	static void SetStdSymbolsInLine(unsigned stdSymbolsInLine)	// задает число символов в одной строке по умолчанию
+	{
+		Line::_stdSymbolsInLine = stdSymbolsInLine;
 	}
 };
 
 // класс меню
 class ConsoleMenu
 {
-	std::map<int, MenuItem> items;
+	std::map<int, MenuItem> _items;
 	std::string _menuName;
+
+	static void ReturnFunc()	// функция - заглушка для выхода из меню
+	{
+		return;
+	}
+
 	bool Execute()
 	{
 		unsigned int code = Input<int>("Command code");
 		if (code == 0) {
-			items[code].Execute();
+			_items[code].Execute();
 			return false;
 		}
-		if (code >= items.size() || code < 0) {
+		if (code >= _items.size() || code < 0) {
 			std::cout << "Invalid command code" << std::endl;
 			_getch();
 			return true;
@@ -96,36 +107,22 @@ class ConsoleMenu
 		//system("cls");
 		//topWriter();
 		//cout<<"Команда "<<items[code]<<":"<<endl;
-		items[code].Execute();
+		_items[code].Execute();
 		return true;
-	}
-	static void ReturnFunc()	// функция - заглушка для выхода из меню
-	{
-		return;
-	}
-public:
-	MenuItemFunc topWriter;		// функция вывода верхушки меню
-	ConsoleMenu(MenuItemFunc topWriter = 0, std::string menuname = "")
-	{
-		this->topWriter = topWriter;
-		this->_menuName = _menuName;
-		Add("Exit", ReturnFunc);
-	}
-	void Add(const char *name, const MenuItemFunc menuItem)
-	{
-		MenuItem newitem(name, menuItem);
-		items.insert(std::make_pair((int)items.size(), newitem));
 	}
 	void Show()	// показать меню
 	{
-		if (_menuName.size() > 0) {
+		if (_menuName.length() > 0) {
 			std::cout << '\t' << _menuName << std::endl;
 			std::cout << Line();
 		}
-		if (topWriter) topWriter();
-		for each(auto i in items)
+		if (_topWriter) _topWriter();
+		for each(auto i in _items)
 			std::cout << i.first << '\t' << i.second << std::endl;
 	}
+public:
+	MenuItemFunc _topWriter;		// функция вывода верхушки меню
+	
 	~ConsoleMenu()	// обработчик меню
 	{
 		do
@@ -133,5 +130,27 @@ public:
 			system("cls");
 			Show();
 		} while (Execute());
+	}
+
+	ConsoleMenu(MenuItemFunc topWriter, std::string menuname)
+	{
+		this->_topWriter = topWriter;
+		this->_menuName = menuname;
+		Add("Exit", ReturnFunc);
+	}
+	ConsoleMenu(MenuItemFunc topWriter)
+	{
+		this->_topWriter = topWriter;
+		Add("Exit", ReturnFunc);
+	}
+	ConsoleMenu(std::string menuname)
+	{
+		this->_menuName = menuname;
+		Add("Exit", ReturnFunc);
+	}
+	void Add(const char *name, const MenuItemFunc menuItem)
+	{
+		MenuItem newitem(name, menuItem);
+		_items.insert(std::make_pair((int)_items.size(), newitem));
 	}
 };
